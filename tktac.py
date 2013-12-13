@@ -1,53 +1,160 @@
-FOO = 43
-BAR = 32
-
+# Import from libraries
 from tkinter import *
 from tkinter.filedialog import *
 import ast
 import sys
 
+# Macros
+WIDTH = 43
+HEIGHT = 32
+FONT= 'standard 14'
+#attachment points for metabord frames
 sticker = [NW, N, NE, W, None, E, SW, S, SE]
+# Marks and names of the players
 markers = ["X","O"]
 players = ["Player X", "Player O"]
 
-map = list()
-for i in [0,0,0,3,3,3,6,6,6]: map.extend(range(i,i+3))
-map *= 3
+# x-coordinate ordered triples necessary and sufficient (up to ycor) for win vector
+xcor = [(a, (a+c)/2, c) for c in range((a%2),3,2) for a in range(0,3)]
+# y-coordinate orderede triples necessary and sufficient (up to xcor) for win vector
+ycor = [(a, (a+c)/2, c) for c in range((a%2),3,2) for a in [0,1]]
+# Tuple of 3-tuples representing linear coordinates of win vectors
+vect = tuple(tuple(a + 3*b for a, b in zip(trip_x, trip_y)) for trip_x, trip_y in zip(xcor, ycor))
 
-def which_board(x): return (3 * (int((x % 81) / 27)) + (int((x % 9)/3)))
+# Subboard class
+class Subboard(index):
+    def __init__(self):
+	self.data = [0]*9
 
-def is_win(b):
-    for mark in markers:
-        if [mark]*3 in [[b[0],b[1],b[2]],[b[0],b[3],b[6]],[b[0],b[4],b[8]],[b[1],b[4],b[7]],[b[2],b[5],b[8]],[b[2],b[4],b[6]],[b[3],b[4],b[5]],[b[6],b[7],b[8]]]:
-            return mark
-    return ""
+    def win(self): # Determines the identity of the winning player
+	for i,j,k in tuple(map(lambda x: map(lambda y: self.data[y], x), vect)):
+	    if i * (i + j + k) == 3: # Only true if all are equal, nonzero
+		return i # The owner of the vector
+	return 0 # Unclaimed
+
+    def countOpen(self): # Number of unfilled squares
+	count = 0
+	for i in range(0,9):
+	    if (board[i] == 0):
+		count += 1
+	return count
+
+    def isUnclaimed(self): # boolean for claimed (won/unwon)
+	return (self.win() == 0)
+
+    def isUnfilled(self): # boolean for filled (complete/incomplete)
+	return (self.countOpen() == 0)
+
+    # class method isOpen():
+    # Returns a boolean value indicating whether the board can be played on,
+    # forced or unforced, determined by taking the logical AND operation of its
+    # isUnclaimed() value and isUnfilled() value.
+    def isOpen(self):
+	return (self.isUnclaimed() and self.isUnfilled())
+
+    # class method allValid():
+    # Returns a list containing the universal indices of all positions in which
+    # moves can be made, regardless of whether the subboard itself is valid for
+    # any move.
+    def allValid(self):
+	return map(lambda i: 9*index + i, filter(lambda i: self.data[i] == 0, range(9)))
+
+    def move(self, pos, newstate):
+	if self.isOpen:
+	    if pos in self.allValid():
+		self.data[pos] = newstate
+		return True
+	    else:
+		return False
+		
+
+
+    
+# Full boardstate class
+class State:
+    def __init__(self):
+	self.data = [Subboard(i) for i in range(9)] # Array of subboards
+	self.history = list()
+	self.hasMoved = False
+ 
+    def win(self): # Determines the identity of the winning player
+	for i,j,k in tuple(map(lambda x: map(lambda y: self.data,[y], x), vect)):
+	    if i * (i + j + k) == 3: # Only true if all are equal, nonzero
+		return i # The owner of the vector
+	return 0 # Unclaimed
+   
+    def lastMove(self):
+	return self.history[-1]
+    
+    def allOpen(self):
+	return filter(lamdba i: self.data[i].isOpen(), range(9))
+
+    def subStates(self):
+	return [a.win() for a in self.data]
+
+    def allValid(self):
+	if self.hasMoved():
+	    force = self.lastMove()
+	    force %= 9
+
+	    if self.data[force].isOpen():
+		return self.data[force].allValid()
+
+	    else: 
+		return [self.data[b].allValid() for self.allOpen[b] for b in range(9)]
+	else:
+	    return range(81)
+
+
+    def isValid(self, move):
+	return (move in self.allValid)
+
+    def move(self, pos, newstate):
+	if not self.hasMoved:
+	    self.hasMoved = True
+	if isValid(self, i):
+	    
+	
+##TKINTER##
+
+class Frame(index):
+    def __init__(self, master)
 
 
 class Game:
     def __init__(self, master=None):
         self.master = master
-        self.master.title("Super TkTacToe ~ Peter Duchovni")
+        self.master.title("Super TkTacToe ~ Python GUI by Peter Duchovni")
         self.top = Toplevel(self.master)
         self.top.title("TkTacToe Game")
+	self.inPlay = False
 
-        quitbutton = Button(self.master, font="standard 14", text="Quit", anchor=W, command=end)
-        quitbutton.pack()
-        new_game = Button(self.master, font="standard 14", text="New Game", anchor=W, command=self.new)
-        new_game.pack()
-        load_save = Button(self.master, font="standard 14", text="Load Game", anchor=W, command=self.load)
-        load_save.pack()
-        save_game = Button(self.master, font="standard 14", text="Save Game", anchor=W, command=self.save)
-        save_game.pack()
-        undo_move = Button(self.master, font="standard 14", text="Undo Move", anchor=W, command=self.undo)
-        undo_move.pack()
-        self.p0 = StringVar()
-        self.p0.set(players[0])
-        p0en = Entry(self.master, font="standard 14", textvar=self.p0)
-        p0en.pack()
-        self.p1 = StringVar()
-        self.p1.set(players[1])
-        p1en = Entry(self.master, font="standard 14", textvar=self.p1)
-        p1en.pack()
+	self.globalButtons()
+
+        self.playerOneName = StringVar()
+        self.playerOneName.set(players[0])
+        self.playerOneNameEntry = Entry(self.master, font=FONT, textvar=self.playerOneName)
+        self.playerOneNameEntry.pack()
+
+        self.playerTwoName = StringVar()
+        self.playerTwoName.set(players[1])
+        self.playerTwoNameEntry = Entry(self.master, font=FONT, textvar=self.playerTwoName)
+        self.playerTwoNameEntry.pack()
+
+
+    def globalButtons(self):
+	buttonQuitAll  = Button(self.master, font=FONT, text="Quit All" , anchor=W, command=self.end)
+	buttonNewGame  = Button(self.master, font=FONT, text="New Game" , anchor=W, command=self.new)
+	buttonLoadGame = Button(self.master, font=FONT, text="Load Game", anchor=W, command=self.load)
+	buttonSaveGame = Button(self.master, font=FONT, text="Save Game", anchor=W, command=self.save)
+	buttonUndoMove = Button(self.master, font=FONT, text="Undo Move", anchor=W, command=self.undo)
+
+	buttonQuitAll.pack()
+	buttonNewGame.pack()
+	buttonLoadGame.pack()
+	buttonSaveGame.pack()
+        buttonUndoMove.pack()
+
 
     def clear(self):
         try:
@@ -70,17 +177,18 @@ class Game:
         rawhistory = l.read()
         l.close()
         self.history = ast.literal_eval(rawhistory)
-        self.clear()
+	if self.inPlay:
+	    self.clear()
         self.play()
 
     def new(self):
-        self.clear()
-        self.history = list()
+	if self.inPlay:
+	    self.clear()
         self.play()
 
     def undo(self):
         if len(self.history) != 0:
-            self.history.pop()
+            last = self.history.pop()
             self.clear()
             self.play()
 
@@ -183,10 +291,10 @@ class Game:
 
 
 
-def end():
-    root.destroy()
-    root.quit()
-    sys.exit(0)
+    def end(self):
+	root.destroy()
+	root.quit()
+	sys.exit(0)
 
 root = Tk()
 app = Game(root)
