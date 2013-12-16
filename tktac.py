@@ -118,7 +118,26 @@ class State:
 ##TKINTER##
 
 class Frame(index):
-    def __init__(self, master)
+    def __init__(self, master):
+	self.index = index
+	self.master = master
+	self.active = True
+	self.buttons = dict()
+	self.draw()
+
+    def draw(self):
+        self.frame = Frame(self.master, bg="Black")
+        for i in range(9):
+            self.buttons[9*index + i] = Button(self.frame,
+                                     height=2, width=2, command = ( lambda i = i: self.press(i)),
+                                     text="", font="systemfixed 14", state=ACTIVE, relief="raised",
+                                     activeforeground="Black", disabledforeground="Black"
+                                    )
+            self.buttons[i].grid(padx=1, pady=1, row = int((i/9)%3), column = int(i % 3))
+
+
+
+
 
 
 class Game:
@@ -193,15 +212,11 @@ class Game:
             self.play()
 
     def play(self):
+        self.inPlay = True
         self.player = 0
-        self.histmove = iter(self.history)
-        self.data = [""]*81
-        self.boardstate = [""]*9
-        self.gamestate = [""]
-        self.space = range(81)
+        self.state = State()
         self.m = IntVar()
-        self.buttons = [0]*81
-        self.draw()
+        self.gameButtons()
 
         while True: 
             pl0 = self.p0.get()
@@ -267,7 +282,7 @@ class Game:
         self.m.set(i)
         self.data[self.m.get()] = markers[self.player % 2]
 
-    def draw(self):
+    def gameFrame(self):
         self.main_frame = Frame(self.top, bg="Black")
         self.main_frame.pack()
 
@@ -275,19 +290,12 @@ class Game:
         self.statusbar = Label(self.top, textvar=self.status, bd=1, anchor=W, font="systemfixed 14")
         self.statusbar.pack()
 
-        self.sub_frames = [0]*9
-        self.board_frames = [0]*9
-
         for i in range(9):
             self.sub_frames[i] = Frame(self.main_frame,bg="Black")
             self.sub_frames[i].grid(row = int(i/3), column = int(i%3), padx = 2, pady = 2, sticky = sticker[i])
-        for i in range(81):
-            self.buttons[i] = Button(self.sub_frames[3*int(i/27) + int((i%9)/3)],
-                                     height=2, width=2, command = ( lambda i = i: self.press(i)),
-                                     text="", font="systemfixed 14", state=ACTIVE, relief="raised",
-                                     activeforeground="Black", disabledforeground="Black"
-                                    )
-            self.buttons[i].grid(padx=1, pady=1, row = int((i/9)%3), column = int(i % 3))
+
+
+
 
 
 
