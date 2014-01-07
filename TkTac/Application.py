@@ -117,7 +117,7 @@ class State:
 	
 ##TKINTER##
 
-class Frame(index):
+class SubFrame(index):
     def __init__(self, master):
 	self.index = index
 	self.master = master
@@ -128,36 +128,53 @@ class Frame(index):
     def draw(self):
         self.frame = Frame(self.master, bg="Black")
         for i in range(9):
-            self.buttons[9*index + i] = Button(self.frame,
-                                     height=2, width=2, command = ( lambda i = i: self.press(i)),
-                                     text="", font="systemfixed 14", state=ACTIVE, relief="raised",
-                                     activeforeground="Black", disabledforeground="Black"
-                                    )
+            self.buttons[9*index + i] = Button(self.frame, height=2, width=2, text="",
+					       font="systemfixed 14", state=ACTIVE,
+					       command = ( lambda i = i: self.press(i)),
+					       relief="raised", activeforeground="Black",
+					       disabledforeground="Black")
             self.buttons[i].grid(padx=1, pady=1, row = int((i/9)%3), column = int(i % 3))
+    
+    def forbid(self):
+	for i in range(9):
+	    self.buttons[9*index + i]["state"] = DISABLED
+	    self.buttons[9*index + i]["relief"] = "sunken"
+	    self.buttons[9*index + i]["bg"] = "Dark Gray"
+    
+    def permit(self):
+	for i in range(9):
+	    self.buttons[9*index + i]["state"] = ACTIVE
+	    self.buttons[9*index + i]["relief"] = "raised"
+	    self.buttons[9*index + i]["bg"] = "White"
+    
+    def disable(self):
+	self.active = False
+        self.frame.grid_forget()
+	for i in range(9):
+	    self.buttons[9*index + i].destroy()
+	
 
 
 
-
-
-
-class Game:
+class Application:
     def __init__(self, master=None):
         self.master = master
         self.master.title("Super TkTacToe ~ Python GUI by Peter Duchovni")
         self.top = Toplevel(self.master)
         self.top.title("TkTacToe Game")
-	self.inPlay = False
-
 	self.globalButtons()
+	self.playerLabels()
 
+    def playerLabels(self):
         self.playerOneName = StringVar()
         self.playerOneName.set(players[0])
         self.playerOneNameEntry = Entry(self.master, font=FONT, textvar=self.playerOneName)
-        self.playerOneNameEntry.pack()
 
         self.playerTwoName = StringVar()
         self.playerTwoName.set(players[1])
         self.playerTwoNameEntry = Entry(self.master, font=FONT, textvar=self.playerTwoName)
+
+        self.playerOneNameEntry.pack()
         self.playerTwoNameEntry.pack()
 
 
@@ -174,16 +191,6 @@ class Game:
 	buttonSaveGame.pack()
         buttonUndoMove.pack()
 
-
-    def clear(self):
-        try:
-            self.main_frame.destroy()
-            self.main_frame.forget()
-            self.statusbar.destroy()
-            self.statusbar.forget()
-        except AttributeError:
-            pass
-
     def save(self):
         savefile = asksaveasfilename(title="Save your game:")
         s = open(savefile,'w')
@@ -196,86 +203,9 @@ class Game:
         rawhistory = l.read()
         l.close()
         self.history = ast.literal_eval(rawhistory)
-	if self.inPlay:
-	    self.clear()
-        self.play()
 
     def new(self):
-	if self.inPlay:
-	    self.clear()
-        self.play()
-
-    def undo(self):
-        if len(self.history) != 0:
-            last = self.history.pop()
-            self.clear()
-            self.play()
-
-    def play(self):
-        self.inPlay = True
-        self.player = 0
-        self.state = State()
-        self.m = IntVar()
-        self.gameButtons()
-
-        while True: 
-            pl0 = self.p0.get()
-            pl1 = self.p1.get()
-            if self.gamestate[0] != "":
-                self.status.set("%s has won." % ([pl0,pl1][ markers.index(self.gamestate[0])]))
-                for i in range(81): self.buttons[i]["state"] = DISABLED
-            elif not ("" in [ self.boardstate[x] for x in range(9) ]):
-                self.status.set("Tie.")
-                for i in range(81): self.buttons[i]["state"] = DISABLED
-            else:
-                self.status.set("%s to move." % ([pl0,pl1][ self.player % 2 ]))
-            try:
-                self.press(next(self.histmove))
-            except StopIteration:
-                self.master.wait_variable(self.m)
-            self.process()
-            self.player += 1
-
-
     def process(self):
-        self.mbn = which_board(self.m.get())
-        self.mb = list(filter(lambda x: which_board(x) == self.mbn, range(81)))
-        self.mbd = [ self.data[x] for x in self.mb ]
-        win = is_win(self.mbd)
-        if (win == "") and (not ("" in self.mbd)):
-                self.boardstate[self.mbn] = "T"
-        else:
-            self.boardstate[self.mbn] = win
-        self.gamestate[0] = is_win(self.boardstate)
-        
-        for i in [x for x in range(9) if self.boardstate[x] != ""]:
-            if len(self.sub_frames[i].grid_slaves()) == 9:
-                for button in self.sub_frames[i].grid_slaves():
-                    button.grid_forget()
-                    button.destroy()
-                    self.buttons[self.buttons.index(button)] = False
-                if self.boardstate[i] == "T":
-                    Label(self.sub_frames[i], text="", font="systemfixed 72").grid(row=0, column=0, ipadx=FOO, ipady=BAR, sticky="nesw")
-                else:
-                    Label(self.sub_frames[i], text=self.boardstate[i], font="systemfixed 72").grid(row=0, column=0, ipadx=FOO, ipady = BAR, sticky="nesw")
-        self.newspace = [ x for x in range(81) if which_board(x) == map[self.m.get()]]
-        if (not ("" in [self.data[x] for x in self.newspace])) or (not ("" in [self.boardstate[which_board(x)] for x in self.newspace])):
-            self.newspace = range(81)
-        self.newspace = list(filter(lambda x: self.data[x] == "" and self.boardstate[which_board(x)] == "", self.newspace))
-        self.space = self.newspace
-        for i in [x for x in range(81) if self.buttons[x]]:
-            self.buttons[i]["text"] = self.data[i]
-            if i in self.space:
-                self.buttons[i]["state"] = ACTIVE
-                self.buttons[i]["relief"] = "raised"
-                self.buttons[i]["bg"] = "White"
-            else:
-                self.buttons[i]["state"] = DISABLED
-                self.buttons[i]["relief"] = "sunken"
-                self.buttons[i]["bg"] = "Dark Gray"
-        self.top.update()
-    
-
     def press(self,i):
         if self.player >= len(self.history):
             self.history.append(i)
@@ -283,27 +213,20 @@ class Game:
         self.data[self.m.get()] = markers[self.player % 2]
 
     def gameFrame(self):
-        self.main_frame = Frame(self.top, bg="Black")
-        self.main_frame.pack()
-
-        self.status = StringVar()
-        self.statusbar = Label(self.top, textvar=self.status, bd=1, anchor=W, font="systemfixed 14")
-        self.statusbar.pack()
-
-        for i in range(9):
-            self.sub_frames[i] = Frame(self.main_frame,bg="Black")
-            self.sub_frames[i].grid(row = int(i/3), column = int(i%3), padx = 2, pady = 2, sticky = sticker[i])
-
-
-
-
-
-
     def end(self):
-	root.destroy()
-	root.quit()
-	sys.exit(0)
 
-root = Tk()
-app = Game(root)
-root.mainloop()
+
+class GameWindow(master):
+    def __init__(self):
+
+
+
+class Game:
+    def __init__(self):
+    def loadFrom(self, init_state):
+    def run(self):
+    def undo(self):
+    def restart(self):
+
+def validate(history):
+
